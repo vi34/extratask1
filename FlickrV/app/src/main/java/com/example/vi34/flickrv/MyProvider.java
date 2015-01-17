@@ -94,6 +94,9 @@ public class MyProvider extends ContentProvider {
         String table;
         String id;
         switch (uriMatcher.match(uri)) {
+            case URI_PHOTOS:
+                table = DBHelper.PHOTOS_TABLE;
+                break;
             case URI_PHOTOS_ID:
                 id = uri.getLastPathSegment();
                 table = DBHelper.PHOTOS_TABLE;

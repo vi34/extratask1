@@ -5,6 +5,7 @@ import com.example.vi34.flickrv.util.SystemUiHider;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.LoaderManager;
+import android.app.WallpaperManager;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.CursorLoader;
@@ -27,9 +28,12 @@ import android.view.MenuInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 
 /**
@@ -70,28 +74,34 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
     private PointF mid = new PointF();
     private float oldDist = 1f;
 
+    private ProgressBar progressBar;
+
     ImageView imageView;
     String photoId;
+    String browseUrl;
+    Bitmap bmp;
+    MyPhoto thisPhoto;
+
     int dbId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_full_image);
         photoId = getIntent().getStringExtra("id");
         dbId = getIntent().getIntExtra("dbId",0);
+        browseUrl = getIntent().getStringExtra("browse");
+        this.setTitle(getIntent().getStringExtra("title"));
+        progressBar = (ProgressBar)findViewById(R.id.progress_bar);
+        progressBar.setIndeterminate(true);
 
         final View controlsView = findViewById(R.id.fullscreen_content_controls);
         final View contentView = findViewById(R.id.fullscreen_content);
 
-        // Set up an instance of SystemUiHider to control the system UI for
-        // this activity.
         mSystemUiHider = SystemUiHider.getInstance(this, contentView, HIDER_FLAGS);
         mSystemUiHider.setup();
-        /*mSystemUiHider
+        mSystemUiHider
                 .setOnVisibilityChangeListener(new SystemUiHider.OnVisibilityChangeListener() {
-                    // Cached values.
                     int mControlsHeight;
                     int mShortAnimTime;
 
@@ -126,10 +136,6 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                         }
                     }
                 });
-*/
-
-        // Set up the user interaction to manually show or hide the system UI.
-
         contentView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -143,13 +149,13 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
             }
         });
 
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+        findViewById(R.id.button_wallpaper).setOnClickListener(mClickListener);
+        findViewById(R.id.button_browse).setOnClickListener(mBrowseListener);
+        findViewById(R.id.button_save).setOnClickListener(mSaveListener);
         imageView = (ImageView)contentView;
         contentView.setOnTouchListener(this);
         getLoaderManager().initLoader(1,null,this);
+
 
         load();
 
@@ -193,13 +199,43 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
      * system UI. This is to prevent the jarring behavior of controls going away
      * while interacting with activity UI.
      */
-    View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
+
+    View.OnClickListener mSaveListener = new View.OnClickListener() {
         @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
+        public void onClick(View v) {
+            if(progressBar.getVisibility() == View.INVISIBLE) {
+                Intent servIntent = new Intent(getApplicationContext(), MyIntentService.class);
+                servIntent.putExtra("wallpaper", true);
+                servIntent.putExtra("savee", true);
+                servIntent.putExtra("dbId",dbId);
+                startService(servIntent);
+
+            }
+        }
+    };
+
+    View.OnClickListener mClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            if(progressBar.getVisibility() == View.INVISIBLE) {
+                Intent servIntent = new Intent(getApplicationContext(), MyIntentService.class);
+                servIntent.putExtra("wallpaper", true);
+                servIntent.putExtra("dbId",dbId);
+                startService(servIntent);
+            }
+        }
+    };
+
+
+    View.OnClickListener mBrowseListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
             if (AUTO_HIDE) {
                 delayedHide(AUTO_HIDE_DELAY_MILLIS);
             }
-            return false;
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(browseUrl));
+            startActivity(intent);
         }
     };
 
@@ -234,7 +270,7 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
             byte[] img = cursor.getBlob(5);
             if(img != null) {
                 ByteArrayInputStream imageStream = new ByteArrayInputStream(img);
-                Bitmap bmp = BitmapFactory.decodeStream(imageStream);
+                bmp = BitmapFactory.decodeStream(imageStream);
 
                 RectF drawableRect = new RectF(0, 0, bmp.getWidth(), bmp.getHeight());
                 RectF viewRect = new RectF(0, 0, imageView.getWidth(), imageView.getHeight());
@@ -243,7 +279,15 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                 imageView.setImageMatrix(matrix);
                 imageView.setImageBitmap(bmp);
                 imageView.invalidate();
+                progressBar.setVisibility(View.INVISIBLE);
+
+                thisPhoto = new MyPhoto(idd,cursor.getString(1),cursor.getBlob(4));
+                thisPhoto.dbId = cursor.getInt(0);
+                thisPhoto.fullUrl = cursor.getString(3);
+                thisPhoto.browseUrl = cursor.getString(8);
+                browseUrl = thisPhoto.browseUrl;
             }
+
         }
     }
 
@@ -254,11 +298,7 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-
-
         ImageView view = (ImageView) v;
-        imageView.setScaleType(ImageView.ScaleType.MATRIX);
-
 
         // Handle touch events here...
         switch (event.getAction() & MotionEvent.ACTION_MASK) {

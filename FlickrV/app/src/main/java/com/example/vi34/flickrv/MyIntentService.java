@@ -1,6 +1,7 @@
 package com.example.vi34.flickrv;
 
 import android.app.IntentService;
+import android.app.WallpaperManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -9,6 +10,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.net.http.AndroidHttpClient;
+import android.os.Environment;
+import android.os.Handler;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.TextView;
 
@@ -23,9 +27,13 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -37,11 +45,22 @@ public class MyIntentService extends IntentService {
         super("MyIntentService");
     }
 
+    private static Handler handler;
+    public int photosPerPage = 12;
+
+    public static void setHandler(Handler handler) {
+        MyIntentService.handler = handler;
+    }
+
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
             String mId = intent.getStringExtra("id");
-            int dbId = intent.getIntExtra("dbId",0);
+            int dbId = intent.getIntExtra("dbId", 0);
+            int page = intent.getIntExtra("page",1);
+            boolean update = intent.getBooleanExtra("update",false);
+            boolean wallpaper = intent.getBooleanExtra("wallpaper",false);
+            boolean save = intent.getBooleanExtra("savee",false);
 
             if(mId != null) {
                 Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI,dbId);
@@ -66,47 +85,104 @@ public class MyIntentService extends IntentService {
                     getContentResolver().update(uri,cv,null,null);
 
                 }
+                c.close();
 
-            } else {
+            } else if(!wallpaper) {
                 Flickr flickr = new Flickr(MainActivity.API_KEY, MainActivity.API_SECRET_KEY);
 
                 try {
-                    Set<String> extras = new TreeSet<>();
-                    extras.add("description");
-                    extras.add("owner_name");
-                    extras.add("url_n");
-                    extras.add("url_c");
+                    Cursor c1 = getContentResolver().query(MyProvider.PHOTOS_CONTENT_URI, new String[]{DBHelper.PHOTO_KEY_IN_FLOW_ID},
+                            DBHelper.PHOTO_KEY_PAGE + " = " + page, null, null);
+                    if(c1.getCount() < photosPerPage || update) {
+                        if(update) {
+                            getContentResolver().delete(MyProvider.PHOTOS_CONTENT_URI, DBHelper.PHOTO_KEY_PAGE + " = "+ page,null);
+                        }
 
-                    String s = null;
-                    PhotoList photos = flickr.getInterestingnessInterface().getList(s, extras, 10, 0);
-                    ContentValues cv = new ContentValues();
+                        Set<String> extras = new TreeSet<>();
+                        extras.add("description");
+                        extras.add("owner_name");
+                        extras.add("url_l");
+                        extras.add("url_c");
+                        extras.add("url_q");
 
-                    Cursor c = getContentResolver().query(MyProvider.PHOTOS_CONTENT_URI, new String[]{DBHelper.PHOTO_KEY_IN_FLOW_ID},
-                            DBHelper.PHOTO_KEY_PHOTOSTREAM_ID + " = " + 0, null, null);
-                    int count = c.getCount();
+                        Cursor c = getContentResolver().query(MyProvider.PHOTOS_CONTENT_URI, new String[]{DBHelper.PHOTO_KEY_IN_FLOW_ID},
+                                DBHelper.PHOTO_KEY_PHOTOSTREAM_ID + " = " + 0, null, null);
+                        int count = c.getCount();
+                        c.close();
+                        String s = null;
+                        PhotoList photos = flickr.getInterestingnessInterface().getList(s, extras, photosPerPage, page);
+                        ContentValues cv = new ContentValues();
 
-                    for (int i = 0; i < photos.size(); ++i) {
-                        Photo photo = photos.get(i);
+                        for (int i = 0; i < photos.size(); ++i) {
+                            Photo photo = photos.get(i);
 
-                        Bitmap bmp = downloadImage(photo.getSmall320Url());
-                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                        byte imageInByte[] = stream.toByteArray();
+                            Bitmap bmp = downloadImage(photo.getLargeSquareUrl());
+                            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                            byte imageInByte[] = stream.toByteArray();
 
-                        String idd = photo.getId();
-                        cv.put(DBHelper.PHOTO_KEY_AUTHOR, photo.getOwner().getUsername());
-                        cv.put(DBHelper.PHOTO_KEY_IMAGE_MEDIUM, imageInByte);
-                        cv.put(DBHelper.PHOTO_KEY_ID, photo.getId());
-                        cv.put(DBHelper.PHOTO_KEY_LARGE_URL, photo.getMedium800Url());
-                        cv.put(DBHelper.PHOTO_KEY_BROWSE_URL, photo.getUrl());
-                        cv.put(DBHelper.PHOTO_KEY_PHOTOSTREAM_ID, 0);
-                        cv.put(DBHelper.PHOTO_KEY_IN_FLOW_ID, count + 1 + i);
-                        // show progress
-                        getContentResolver().insert(MyProvider.PHOTOS_CONTENT_URI, cv);
+                            cv.put(DBHelper.PHOTO_KEY_AUTHOR, photo.getOwner().getUsername());
+                            cv.put(DBHelper.PHOTO_KEY_IMAGE_MEDIUM, imageInByte);
+                            cv.put(DBHelper.PHOTO_KEY_ID, photo.getId());
+                            cv.put(DBHelper.PHOTO_KEY_LARGE_URL, photo.getLargeUrl());
+                            cv.put(DBHelper.PHOTO_KEY_BROWSE_URL, photo.getUrl());
+                            cv.put(DBHelper.PHOTO_KEY_PHOTOSTREAM_ID, 0);
+                            cv.put(DBHelper.PHOTO_KEY_IN_FLOW_ID, count + 1 + i);
+                            cv.put(DBHelper.PHOTO_KEY_PAGE, page);
+
+                            // show progress
+                            if(handler != null) {
+                                handler.obtainMessage(0).sendToTarget();
+                            }
+                            String row = getContentResolver().insert(MyProvider.PHOTOS_CONTENT_URI, cv).getLastPathSegment();
+                        }
+                        if(handler != null) {
+                            handler.obtainMessage(1).sendToTarget();
+                        }
                     }
-
+                    c1.close();
                 } catch (Exception e) {
+                   // Log.e("ARRR",e.getMessage());
                 }
+            } else if(wallpaper || save) {
+                Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI,dbId);
+                Cursor c = getContentResolver().query(uri, null, null, null, null);
+                if(c.getCount() != 0) {
+                    c.moveToNext();
+                    byte img[] = c.getBlob(5);
+                    ByteArrayInputStream imageStream = new ByteArrayInputStream(img);
+                    Bitmap bmp = BitmapFactory.decodeStream(imageStream);
+                    if(!save) {
+                        WallpaperManager wmgr = WallpaperManager.getInstance(getApplicationContext());
+                        try {
+                            wmgr.setBitmap(bmp);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+
+                        try {
+                            String root = Environment.getExternalStorageDirectory().toString();
+                            File myDir = new File(root + "/saved_images");
+                            myDir.mkdirs();
+                            FileOutputStream fOut = null;
+                            File file = new File(myDir, c.getString(2) + ".jpg");
+                            if (file.exists ()) file.delete ();
+                            fOut = new FileOutputStream(file);
+                            bmp.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+                            fOut.flush();
+                            fOut.close();
+
+                        }
+                        catch (Exception e)
+                        {
+                            String s = e.getMessage();
+                            Log.e("save", e.getMessage());
+                        }
+                    }
+                }
+                c.close();
+
             }
         }
     }

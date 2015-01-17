@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     public static final String DBNAME = "mydb";
     public static final String PHOTOS_TABLE = "photos";
-    public static final Integer VERSION = 1;
+    public static final Integer VERSION = 2;
 
     public static final String PHOTO_KEY_AUTHOR = "author";
     public static final String PHOTO_KEY_IMAGE_MEDIUM = "img_medium";
@@ -20,6 +20,7 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String PHOTO_KEY_PHOTOSTREAM_ID = "photostream_id";
     public static final String PHOTO_KEY_LARGE_URL = "large_url";
     public static final String PHOTO_KEY_BROWSE_URL = "browse_url";
+    public static final String PHOTO_KEY_PAGE = "photo_page";
 
 
     public DBHelper(Context context) {
@@ -37,12 +38,8 @@ public class DBHelper extends SQLiteOpenHelper {
                 + PHOTO_KEY_IMAGE_LARGE + " blob,"
                 + PHOTO_KEY_IN_FLOW_ID + " integer,"
                 + PHOTO_KEY_PHOTOSTREAM_ID + " integer,"
-                + PHOTO_KEY_BROWSE_URL + " text"+ ");");
-    }
-
-    public void clearBase(SQLiteDatabase db) {
-        db.execSQL("drop table if exists " + PHOTOS_TABLE);
-        onCreate(db);
+                + PHOTO_KEY_BROWSE_URL + " text,"
+                + PHOTO_KEY_PAGE + " integer" + ");");
     }
 
     @Override

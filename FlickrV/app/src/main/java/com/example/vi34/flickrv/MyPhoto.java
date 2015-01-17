@@ -11,6 +11,7 @@ import java.io.ByteArrayInputStream;
 public class MyPhoto {
     String author;
     String fullUrl;
+    String browseUrl;
     String id;
     int dbId;
     byte[] image;
