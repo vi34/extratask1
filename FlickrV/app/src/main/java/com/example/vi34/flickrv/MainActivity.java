@@ -6,20 +6,14 @@ import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
-import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ProgressBar;
@@ -27,21 +21,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
-import com.googlecode.flickrjandroid.Flickr;
-import com.googlecode.flickrjandroid.FlickrException;
-import com.googlecode.flickrjandroid.photos.PhotoList;
-
-import org.json.JSONException;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class MainActivity extends ActionBarActivity implements LoaderManager.LoaderCallbacks<Cursor>{
+public class MainActivity extends ActionBarActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     public static final String API_KEY = "a0f7f5818e3f6a67f9bca18df31fdc34";
-    public static final String API_SECRET_KEY= "dfbdeb38e1eea60a";
+    public static final String API_SECRET_KEY = "dfbdeb38e1eea60a";
     private PhotoAdapter myAdapter;
     private GridView gridView;
     private TextView txtPhotostream;
@@ -50,8 +37,8 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
     private int myProgress = 0;
     private int currentPage = 1;
     private boolean updating = false;
-    ProgressBar progressBar;
-    Intent intent;
+    private ProgressBar progressBar;
+    private Intent intent;
 
 
     @Override
@@ -59,10 +46,10 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        progressBar = (ProgressBar)findViewById(R.id.progressBarHorizontal);
-        txtPhotostream = (TextView)findViewById(R.id.txt_photostream);
-        txtPhotostream.setText("Interesting today");
-        viewFlipper = (ViewFlipper)findViewById(R.id.view_flipper);
+        progressBar = (ProgressBar) findViewById(R.id.progressBarHorizontal);
+        txtPhotostream = (TextView) findViewById(R.id.txt_photostream);
+        txtPhotostream.setText(R.string.title);
+        viewFlipper = (ViewFlipper) findViewById(R.id.view_flipper);
         intent = new Intent(this, FullImageActivity.class);
         gridView = (GridView) findViewById(R.id.gridView1);
         List<MyPhoto> list1 = new ArrayList<MyPhoto>();
@@ -73,30 +60,30 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
         load();
 
         handler = new Handler(new Handler.Callback() {
-                        @Override
-                        public boolean handleMessage(Message message) {
-                                switch (message.what) {
-                                    case 0:
-                                        if (myProgress == 0) {
-                                            updating = true;
-                                            progressBar.setVisibility(View.VISIBLE);
-                                        }
-                                        myProgress++;
+            @Override
+            public boolean handleMessage(Message message) {
+                switch (message.what) {
+                    case 0:
+                        if (myProgress == 0) {
+                            updating = true;
+                            progressBar.setVisibility(View.VISIBLE);
+                        }
+                        myProgress++;
 
-                                        if(myProgress == 12) {
-                                            progressBar.setVisibility(View.INVISIBLE);
-                                            updating = false;
-                                        }
-                                            progressBar.setProgress(myProgress);
-                                        break;
-                                    case 1:
-                                        progressBar.setVisibility(View.INVISIBLE);
-                                        updating = false;
-                                    }
+                        if (myProgress == MyIntentService.photosPerPage) {
+                            progressBar.setVisibility(View.INVISIBLE);
+                            updating = false;
+                        }
+                        progressBar.setProgress(myProgress);
+                        break;
+                    case 1:
+                        progressBar.setVisibility(View.INVISIBLE);
+                        updating = false;
+                }
 
-                                return true;
-                            }
-                    });
+                return true;
+            }
+        });
         MyIntentService.setHandler(handler);
     }
 
@@ -104,19 +91,18 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
         @Override
         public void onItemClick(AdapterView<?> parent, View v,
                                 int position, long id) {
-            intent.putExtra("id",myAdapter.mData.get(position).id);
-            intent.putExtra("dbId",myAdapter.mData.get(position).dbId);
-            intent.putExtra("browse",myAdapter.mData.get(position).browseUrl);
+            intent.putExtra("id", myAdapter.mData.get(position).id);
+            intent.putExtra("dbId", myAdapter.mData.get(position).dbId);
+            intent.putExtra("browse", myAdapter.mData.get(position).browseUrl);
             intent.putExtra("title", myAdapter.mData.get(position).author);
             startActivity(intent);
         }
     };
 
-    void load()
-    {
-        if(checkNet())  {
+    void load() {
+        if (checkNet()) {
             Intent servIntent = new Intent(this, MyIntentService.class);
-            servIntent.putExtra("page",currentPage);
+            servIntent.putExtra("page", currentPage);
             startService(servIntent);
         }
     }
@@ -134,10 +120,9 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
     }
 
 
-
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new CursorLoader(this, MyProvider.PHOTOS_CONTENT_URI,null,DBHelper.PHOTO_KEY_PAGE + " = " + currentPage,null,null);
+        return new CursorLoader(this, MyProvider.PHOTOS_CONTENT_URI, null, DBHelper.PHOTO_KEY_PAGE + " = " + currentPage, null, null);
     }
 
     @Override
@@ -159,7 +144,6 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
                 myAdapter.notifyDataSetChanged();
             }
         } catch (Exception e) {
-            Log.e("cursor", e.getMessage());
         }
 
     }
@@ -172,30 +156,30 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
 
     public void nextPage(View view) {
         myProgress = 0;
-        viewFlipper.setInAnimation(AnimationUtils.loadAnimation(this,R.anim.go_next_in));
-        viewFlipper.setOutAnimation(AnimationUtils.loadAnimation(this,R.anim.go_next_out));
+        viewFlipper.setInAnimation(AnimationUtils.loadAnimation(this, R.anim.go_next_in));
+        viewFlipper.setOutAnimation(AnimationUtils.loadAnimation(this, R.anim.go_next_out));
         viewFlipper.showNext();
 
         currentPage++;
-        if(currentPage % 2 == 0) {
-            gridView = (GridView)findViewById(R.id.gridView2);
+        if (currentPage % 2 == 0) {
+            gridView = (GridView) findViewById(R.id.gridView2);
 
-        } else  {
-            gridView = (GridView)findViewById(R.id.gridView1);
+        } else {
+            gridView = (GridView) findViewById(R.id.gridView1);
         }
         myAdapter = new PhotoAdapter(new ArrayList<MyPhoto>());
         gridView.setAdapter(myAdapter);
         gridView.setOnItemClickListener(listener);
         myAdapter.notifyDataSetChanged();
-        getLoaderManager().restartLoader(1,null,MainActivity.this);
+        getLoaderManager().restartLoader(1, null, MainActivity.this);
         load();
     }
 
     public void prevPage(View view) {
-        if(currentPage != 1) {
+        if (currentPage != 1) {
             myProgress = 0;
-            viewFlipper.setInAnimation(AnimationUtils.loadAnimation(this,R.anim.go_prev_in));
-            viewFlipper.setOutAnimation(AnimationUtils.loadAnimation(this,R.anim.go_prev_out));
+            viewFlipper.setInAnimation(AnimationUtils.loadAnimation(this, R.anim.go_prev_in));
+            viewFlipper.setOutAnimation(AnimationUtils.loadAnimation(this, R.anim.go_prev_out));
             viewFlipper.showPrevious();
 
             currentPage--;
@@ -214,10 +198,10 @@ public class MainActivity extends ActionBarActivity implements LoaderManager.Loa
     }
 
     public void refresh(View view) {
-        if(checkNet() && !updating)  {
+        if (checkNet() && !updating) {
             Intent servIntent = new Intent(this, MyIntentService.class);
             servIntent.putExtra("update", true);
-            servIntent.putExtra("page",currentPage);
+            servIntent.putExtra("page", currentPage);
             startService(servIntent);
             updating = true;
             myProgress = 0;

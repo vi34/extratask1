@@ -15,12 +15,13 @@ import android.text.TextUtils;
  */
 public class MyProvider extends ContentProvider {
     static final String PHOTO_ID = "_id";
-    static final String AUTHORITY = "com.example.vi34.flickrv";
+    public static final String AUTHORITY = "com.example.vi34.flickrv";
     public static final Uri PHOTOS_CONTENT_URI = Uri.parse("content://"
             + AUTHORITY + "/" + DBHelper.PHOTOS_TABLE);
     static final int URI_PHOTOS = 1;
     static final int URI_PHOTOS_ID = 2;
     private static final UriMatcher uriMatcher;
+
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(AUTHORITY, DBHelper.PHOTOS_TABLE, URI_PHOTOS);
@@ -38,11 +39,11 @@ public class MyProvider extends ContentProvider {
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        SQLiteQueryBuilder builder  = new SQLiteQueryBuilder();
+        SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
         switch (uriMatcher.match(uri)) {
             case URI_PHOTOS:
                 if (TextUtils.isEmpty(sortOrder)) {
-                    sortOrder = "_id " + " ASC";
+                    sortOrder = PHOTO_ID + " ASC";
                 }
                 builder.setTables(DBHelper.PHOTOS_TABLE);
                 break;

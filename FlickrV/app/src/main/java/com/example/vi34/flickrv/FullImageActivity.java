@@ -1,11 +1,8 @@
 package com.example.vi34.flickrv;
 
-import com.example.vi34.flickrv.util.SystemUiHider;
-
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.LoaderManager;
-import android.app.WallpaperManager;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.CursorLoader;
@@ -24,41 +21,22 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.FloatMath;
-import android.view.MenuInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.example.vi34.flickrv.util.SystemUiHider;
+
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
 
 
-/**
- * An example full-screen activity that shows and hides the system UI (i.e.
- * status bar and navigation/system bar) with user interaction.
- *
- * @see SystemUiHider
- */
-public class FullImageActivity extends Activity implements View.OnTouchListener ,LoaderManager.LoaderCallbacks<Cursor> {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
+public class FullImageActivity extends Activity implements View.OnTouchListener, LoaderManager.LoaderCallbacks<Cursor> {
+
     private static final boolean AUTO_HIDE = true;
-
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
 
-    /**
-     * If set, will toggle the system UI visibility upon interaction. Otherwise,
-     * will show the system UI visibility upon interaction.
-     */
     private boolean TOGGLE_ON_CLICK = true;
     private static final int HIDER_FLAGS = SystemUiHider.FLAG_HIDE_NAVIGATION;
 
@@ -75,24 +53,22 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
     private float oldDist = 1f;
 
     private ProgressBar progressBar;
-
-    ImageView imageView;
-    String photoId;
-    String browseUrl;
-    Bitmap bmp;
-    MyPhoto thisPhoto;
-
-    int dbId;
+    private ImageView imageView;
+    private String photoId;
+    private String browseUrl;
+    private Bitmap bmp;
+    private MyPhoto thisPhoto;
+    private int dbId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_full_image);
         photoId = getIntent().getStringExtra("id");
-        dbId = getIntent().getIntExtra("dbId",0);
+        dbId = getIntent().getIntExtra("dbId", 0);
         browseUrl = getIntent().getStringExtra("browse");
         this.setTitle(getIntent().getStringExtra("title"));
-        progressBar = (ProgressBar)findViewById(R.id.progress_bar);
+        progressBar = (ProgressBar) findViewById(R.id.progress_bar);
         progressBar.setIndeterminate(true);
 
         final View controlsView = findViewById(R.id.fullscreen_content_controls);
@@ -109,10 +85,6 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                     @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
                     public void onVisibilityChange(boolean visible) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-                            // If the ViewPropertyAnimator API is available
-                            // (Honeycomb MR2 and later), use it to animate the
-                            // in-layout UI controls at the bottom of the
-                            // screen.
                             if (mControlsHeight == 0) {
                                 mControlsHeight = controlsView.getHeight();
                             }
@@ -124,14 +96,10 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                                     .translationY(visible ? 0 : mControlsHeight)
                                     .setDuration(mShortAnimTime);
                         } else {
-                            // If the ViewPropertyAnimator APIs aren't
-                            // available, simply show or hide the in-layout UI
-                            // controls.
                             controlsView.setVisibility(visible ? View.VISIBLE : View.GONE);
                         }
 
                         if (visible && AUTO_HIDE) {
-                            // Schedule a hide().
                             delayedHide(AUTO_HIDE_DELAY_MILLIS);
                         }
                     }
@@ -152,22 +120,17 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
         findViewById(R.id.button_wallpaper).setOnClickListener(mClickListener);
         findViewById(R.id.button_browse).setOnClickListener(mBrowseListener);
         findViewById(R.id.button_save).setOnClickListener(mSaveListener);
-        imageView = (ImageView)contentView;
+        imageView = (ImageView) contentView;
         contentView.setOnTouchListener(this);
-        getLoaderManager().initLoader(1,null,this);
-
-
+        getLoaderManager().initLoader(1, null, this);
         load();
-
-
     }
 
-    void load()
-    {
-        if(checkNet())  {
+    void load() {
+        if (checkNet()) {
             Intent servIntent = new Intent(this, MyIntentService.class);
-            servIntent.putExtra("id",photoId);
-            servIntent.putExtra("dbId",dbId);
+            servIntent.putExtra("id", photoId);
+            servIntent.putExtra("dbId", dbId);
             startService(servIntent);
         }
     }
@@ -183,31 +146,21 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
             return false;
         }
     }
+
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
         delayedHide(100);
     }
-
-
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
 
     View.OnClickListener mSaveListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            if(progressBar.getVisibility() == View.INVISIBLE) {
+            if (progressBar.getVisibility() == View.INVISIBLE) {
                 Intent servIntent = new Intent(getApplicationContext(), MyIntentService.class);
                 servIntent.putExtra("wallpaper", true);
-                servIntent.putExtra("savee", true);
-                servIntent.putExtra("dbId",dbId);
+                servIntent.putExtra("save", true);
+                servIntent.putExtra("dbId", dbId);
                 startService(servIntent);
 
             }
@@ -217,10 +170,10 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
     View.OnClickListener mClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            if(progressBar.getVisibility() == View.INVISIBLE) {
+            if (progressBar.getVisibility() == View.INVISIBLE) {
                 Intent servIntent = new Intent(getApplicationContext(), MyIntentService.class);
                 servIntent.putExtra("wallpaper", true);
-                servIntent.putExtra("dbId",dbId);
+                servIntent.putExtra("dbId", dbId);
                 startService(servIntent);
             }
         }
@@ -247,10 +200,6 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
         }
     };
 
-    /**
-     * Schedules a call to hide() in [delay] milliseconds, canceling any
-     * previously scheduled calls.
-     */
     private void delayedHide(int delayMillis) {
         mHideHandler.removeCallbacks(mHideRunnable);
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
@@ -259,16 +208,16 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI, dbId);
-        return new CursorLoader(this, uri,null,null,null,null);
+        return new CursorLoader(this, uri, null, null, null, null);
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
-        if(cursor.getCount() != 0) {
+        if (cursor.getCount() != 0) {
             cursor.moveToNext();
             String idd = cursor.getString(2);
             byte[] img = cursor.getBlob(5);
-            if(img != null) {
+            if (img != null) {
                 ByteArrayInputStream imageStream = new ByteArrayInputStream(img);
                 bmp = BitmapFactory.decodeStream(imageStream);
 
@@ -281,7 +230,7 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                 imageView.invalidate();
                 progressBar.setVisibility(View.INVISIBLE);
 
-                thisPhoto = new MyPhoto(idd,cursor.getString(1),cursor.getBlob(4));
+                thisPhoto = new MyPhoto(idd, cursor.getString(1), cursor.getBlob(4));
                 thisPhoto.dbId = cursor.getInt(0);
                 thisPhoto.fullUrl = cursor.getString(3);
                 thisPhoto.browseUrl = cursor.getString(8);
@@ -299,8 +248,6 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         ImageView view = (ImageView) v;
-
-        // Handle touch events here...
         switch (event.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_POINTER_DOWN:
                 oldDist = spacing(event);
@@ -315,7 +262,7 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
                 mode = NONE;
                 break;
             case MotionEvent.ACTION_MOVE:
-               if (mode == ZOOM) {
+                if (mode == ZOOM) {
                     float newDist = spacing(event);
                     if (newDist > 10f) {
                         matrix.set(savedMatrix);
@@ -327,7 +274,7 @@ public class FullImageActivity extends Activity implements View.OnTouchListener 
         }
 
         view.setImageMatrix(matrix);
-        return true; // indicate event was handled
+        return true;
     }
 
 

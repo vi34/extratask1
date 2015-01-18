@@ -24,7 +24,7 @@ public class MyPhoto {
     }
 
     public Bitmap getBitmap() {
-        if(bmp == null) {
+        if (bmp == null) {
             ByteArrayInputStream imageStream = new ByteArrayInputStream(image);
             bmp = BitmapFactory.decodeStream(imageStream);
         }

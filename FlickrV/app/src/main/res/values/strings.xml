@@ -12,5 +12,6 @@
     <string name="browse">open in browser</string>
     <string name="wallpaper">set as wallpaper</string>
     <string name="save">save</string>
+    <string name="title">Interesting today</string>
 
 </resources>

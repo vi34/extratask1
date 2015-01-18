@@ -12,13 +12,9 @@ import android.net.Uri;
 import android.net.http.AndroidHttpClient;
 import android.os.Environment;
 import android.os.Handler;
-import android.provider.MediaStore;
-import android.util.Log;
-import android.widget.TextView;
 
 import com.googlecode.flickrjandroid.Flickr;
 import com.googlecode.flickrjandroid.photos.Photo;
-import com.googlecode.flickrjandroid.photos.PhotoContext;
 import com.googlecode.flickrjandroid.photos.PhotoList;
 
 import org.apache.http.HttpEntity;
@@ -33,7 +29,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -46,7 +41,7 @@ public class MyIntentService extends IntentService {
     }
 
     private static Handler handler;
-    public int photosPerPage = 12;
+    public static final int photosPerPage = 12;
 
     public static void setHandler(Handler handler) {
         MyIntentService.handler = handler;
@@ -57,15 +52,15 @@ public class MyIntentService extends IntentService {
         if (intent != null) {
             String mId = intent.getStringExtra("id");
             int dbId = intent.getIntExtra("dbId", 0);
-            int page = intent.getIntExtra("page",1);
-            boolean update = intent.getBooleanExtra("update",false);
-            boolean wallpaper = intent.getBooleanExtra("wallpaper",false);
-            boolean save = intent.getBooleanExtra("savee",false);
+            int page = intent.getIntExtra("page", 1);
+            boolean update = intent.getBooleanExtra("update", false);
+            boolean wallpaper = intent.getBooleanExtra("wallpaper", false);
+            boolean save = intent.getBooleanExtra("save", false);
 
-            if(mId != null) {
-                Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI,dbId);
-                Cursor c = getContentResolver().query(uri, null,null, null, null);
-                if(c.getCount() != 0) {
+            if (mId != null) {
+                Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI, dbId);
+                Cursor c = getContentResolver().query(uri, null, null, null, null);
+                if (c.getCount() != 0) {
                     c.moveToNext();
                     ContentValues cv = new ContentValues();
                     String url = c.getString(3);
@@ -82,20 +77,20 @@ public class MyIntentService extends IntentService {
                     cv.put(DBHelper.PHOTO_KEY_IN_FLOW_ID, c.getInt(6));
                     cv.put(DBHelper.PHOTO_KEY_IMAGE_LARGE, imageInByte);
 
-                    getContentResolver().update(uri,cv,null,null);
+                    getContentResolver().update(uri, cv, null, null);
 
                 }
                 c.close();
 
-            } else if(!wallpaper) {
+            } else if (!wallpaper) {
                 Flickr flickr = new Flickr(MainActivity.API_KEY, MainActivity.API_SECRET_KEY);
 
                 try {
                     Cursor c1 = getContentResolver().query(MyProvider.PHOTOS_CONTENT_URI, new String[]{DBHelper.PHOTO_KEY_IN_FLOW_ID},
                             DBHelper.PHOTO_KEY_PAGE + " = " + page, null, null);
-                    if(c1.getCount() < photosPerPage || update) {
-                        if(update) {
-                            getContentResolver().delete(MyProvider.PHOTOS_CONTENT_URI, DBHelper.PHOTO_KEY_PAGE + " = "+ page,null);
+                    if (c1.getCount() < photosPerPage || update) {
+                        if (update) {
+                            getContentResolver().delete(MyProvider.PHOTOS_CONTENT_URI, DBHelper.PHOTO_KEY_PAGE + " = " + page, null);
                         }
 
                         Set<String> extras = new TreeSet<>();
@@ -131,31 +126,30 @@ public class MyIntentService extends IntentService {
                             cv.put(DBHelper.PHOTO_KEY_PAGE, page);
 
                             // show progress
-                            if(handler != null) {
+                            if (handler != null) {
                                 handler.obtainMessage(0).sendToTarget();
                             }
-                            String row = getContentResolver().insert(MyProvider.PHOTOS_CONTENT_URI, cv).getLastPathSegment();
+                            getContentResolver().insert(MyProvider.PHOTOS_CONTENT_URI, cv).getLastPathSegment();
                         }
-                        if(handler != null) {
+                        if (handler != null) {
                             handler.obtainMessage(1).sendToTarget();
                         }
                     }
                     c1.close();
                 } catch (Exception e) {
-                   // Log.e("ARRR",e.getMessage());
                 }
-            } else if(wallpaper || save) {
-                Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI,dbId);
+            } else if (wallpaper || save) {
+                Uri uri = ContentUris.withAppendedId(MyProvider.PHOTOS_CONTENT_URI, dbId);
                 Cursor c = getContentResolver().query(uri, null, null, null, null);
-                if(c.getCount() != 0) {
+                if (c.getCount() != 0) {
                     c.moveToNext();
                     byte img[] = c.getBlob(5);
                     ByteArrayInputStream imageStream = new ByteArrayInputStream(img);
                     Bitmap bmp = BitmapFactory.decodeStream(imageStream);
-                    if(!save) {
-                        WallpaperManager wmgr = WallpaperManager.getInstance(getApplicationContext());
+                    if (!save) {
+                        WallpaperManager wallpaperManager = WallpaperManager.getInstance(getApplicationContext());
                         try {
-                            wmgr.setBitmap(bmp);
+                            wallpaperManager.setBitmap(bmp);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -165,19 +159,16 @@ public class MyIntentService extends IntentService {
                             String root = Environment.getExternalStorageDirectory().toString();
                             File myDir = new File(root + "/saved_images");
                             myDir.mkdirs();
-                            FileOutputStream fOut = null;
                             File file = new File(myDir, c.getString(2) + ".jpg");
-                            if (file.exists ()) file.delete ();
-                            fOut = new FileOutputStream(file);
+                            if (file.exists()) {
+                                file.delete();
+                            }
+                            FileOutputStream fOut = new FileOutputStream(file);
                             bmp.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
                             fOut.flush();
                             fOut.close();
 
-                        }
-                        catch (Exception e)
-                        {
-                            String s = e.getMessage();
-                            Log.e("save", e.getMessage());
+                        } catch (Exception e) {
                         }
                     }
                 }
@@ -194,7 +185,6 @@ public class MyIntentService extends IntentService {
             HttpResponse response = client.execute(getRequest);
             final int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
-                Log.w("ImageDownloader", "Error " + statusCode + " while retrieving bitmap from " + url);
                 return null;
             }
             final HttpEntity entity = response.getEntity();
@@ -210,14 +200,8 @@ public class MyIntentService extends IntentService {
                     entity.consumeContent();
                 }
             }
-        } catch (IOException e) {
-            getRequest.abort();
-        } catch (IllegalStateException e) {
-            getRequest.abort();
-            Log.w("Incorrect URL:" + url, e);
         } catch (Exception e) {
             getRequest.abort();
-            Log.w("Error while retrieving bitmap from " + url, e);
         } finally {
             if ((client instanceof AndroidHttpClient)) {
                 ((AndroidHttpClient) client).close();

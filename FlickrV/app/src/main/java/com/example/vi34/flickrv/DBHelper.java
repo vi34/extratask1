@@ -29,7 +29,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("create table " + PHOTOS_TABLE +" ("
+        db.execSQL("create table " + PHOTOS_TABLE + " ("
                 + "_id integer primary key autoincrement,"
                 + PHOTO_KEY_AUTHOR + " text,"
                 + PHOTO_KEY_ID + " text,"

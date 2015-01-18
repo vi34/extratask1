@@ -1,8 +1,5 @@
 package com.example.vi34.flickrv;
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,11 +12,11 @@ import java.util.List;
 /**
  * Created by vi34 on 16.01.15.
  */
-public class PhotoAdapter  extends BaseAdapter {
+public class PhotoAdapter extends BaseAdapter {
 
     public List<MyPhoto> mData;
 
-    public PhotoAdapter( List<MyPhoto> data) {
+    public PhotoAdapter(List<MyPhoto> data) {
         this.mData = data;
     }
 
@@ -40,15 +37,11 @@ public class PhotoAdapter  extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-    // TODO Auto-generated method stub
         View cell = LayoutInflater.from(parent.getContext()).inflate(R.layout.cellgrid, parent, false);
-
         ImageView imageView = (ImageView) cell.findViewById(R.id.imagepart);
-        //imageView.setScaleType(ImageView.ScaleType.CENTER);
         TextView textView = (TextView) cell.findViewById(R.id.textpart);
         imageView.setImageBitmap(mData.get(position).getBitmap());
         textView.setText("by " + mData.get(position).author);
-
         return cell;
     }
 
